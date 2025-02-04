@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Монеты</title>
+  <!-- Подключаем шрифт Roboto -->
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --primary-color: #FFD700; /* золотой */
+      --secondary-color: #FFA500; /* темно-золотой */
+      --bg-color: #f5f5f5;
+      --text-color: #333;
+    }
+    * {
+      box-sizing: border-box;
+    }
+    body {
+      margin: 0;
+      font-family: 'Roboto', sans-serif;
+      background: var(--bg-color);
+      color: var(--text-color);
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+    }
+    /* Контейнер для основного контента */
+    .content {
+      flex: 1;
+      padding: 20px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+    .section {
+      width: 100%;
+      max-width: 400px;
+      text-align: center;
+      position: relative;
+    }
+    /* Секция игры */
+    .balance-container {
+      margin-bottom: 40px;
+    }
+    .balance {
+      font-size: 48px;
+      font-weight: 700;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+    /* Иконка монетки рядом с числом */
+    .balance svg {
+      width: 50px;
+      height: 50px;
+      margin-left: 10px;
+    }
+    /* Секция с монетой для нажатия */
+    .coin-container {
+      position: relative;
+    }
+    .coin {
+      width: 100px;
+      height: 100px;
+      margin: 0 auto;
+      cursor: pointer;
+      transition: transform 0.2s;
+    }
+    .coin:hover {
+      transform: scale(1.05);
+    }
+    /* Анимация нажатия (bounce) */
+    .coin.clicked {
+      animation: bounce 0.4s ease;
+    }
+    @keyframes bounce {
+      0% { transform: scale(1); }
+      50% { transform: scale(1.2); }
+      100% { transform: scale(1); }
+    }
+    /* Эффект «летящей» монетки */
+    .coin-fly {
+      position: absolute;
+      left: 50%;
+      top: 0;
+      transform: translate(-50%, 0);
+      font-size: 24px;
+      font-weight: 700;
+      color: var(--primary-color);
+      animation: fly 1s ease-out forwards;
+      pointer-events: none;
+    }
+    @keyframes fly {
+      0% {
+        opacity: 1;
+        transform: translate(-50%, 0) scale(1);
+      }
+      100% {
+        opacity: 0;
+        transform: translate(-50%, -80px) scale(1.5);
+      }
+    }
+    /* Нижняя навигационная панель */
+    .bottom-nav {
+      display: flex;
+      border-top: 1px solid #ccc;
+      background: #fff;
+    }
+    .bottom-nav button {
+      flex: 1;
+      padding: 15px;
+      border: none;
+      background: none;
+      font-size: 16px;
+      cursor: pointer;
+    }
+    .bottom-nav button.active {
+      background: #eee;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+  <div class="content">
+    <!-- Вкладка ИГРА -->
+    <div id="gameSection" class="section">
+      <div class="balance-container">
+        <div class="balance">
+          <span id="coinAmount">0</span>
+          <!-- Иконка монетки (маленькая) -->
+          <svg viewBox="0 0 100 100">
+            <defs>
+              <radialGradient id="coinGradient" cx="50%" cy="50%" r="50%">
+                <stop offset="0%" stop-color="#FFD700"/>
+                <stop offset="100%" stop-color="#FFA500"/>
+              </radialGradient>
+            </defs>
+            <circle cx="50" cy="50" r="45" fill="url(#coinGradient)" stroke="#DAA520" stroke-width="5"/>
+          </svg>
+        </div>
+      </div>
+      <div class="coin-container">
+        <!-- Большая монета для нажатия -->
+        <div class="coin" id="coin" onclick="earnCoin()">
+          <svg viewBox="0 0 100 100">
+            <defs>
+              <radialGradient id="coinGradient2" cx="50%" cy="50%" r="50%">
+                <stop offset="0%" stop-color="#FFD700"/>
+                <stop offset="100%" stop-color="#FFA500"/>
+              </radialGradient>
+            </defs>
+            <circle cx="50" cy="50" r="45" fill="url(#coinGradient2)" stroke="#DAA520" stroke-width="5"/>
+            <!-- Символ плюса, означающий начисление -->
+            <text x="50%" y="55%" text-anchor="middle" fill="#fff" font-size="40" font-family="Roboto" dy=".3em"></text>
+          </svg>
+        </div>
+      </div>
+    </div>
+    <!-- Вкладка ЗАДАНИЯ -->
+    <div id="tasksSection" class="section" style="display: none;">
+      <h1>Задания</h1>
+      <p>Здесь будут ваши задания и инструкции.</p>
+      <ul style="text-align: left;">
+        <li>Задание 1: Нажмите на монету, чтобы получить монетки.</li>
+        <li>Задание 2: Наслаждайтесь современным дизайном и анимацией.</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- Нижняя навигационная панель -->
+  <nav class="bottom-nav">
+    <button id="navGame" class="active" onclick="showSection('game')">ИГРА</button>
+    <button id="navTasks" onclick="showSection('tasks')">ЗАДАНИЯ</button>
+  </nav>
+
+  <script>
+    // Инициализация Telegram Web App
+    if (window.Telegram && Telegram.WebApp) {
+      Telegram.WebApp.ready();
+    }
+    
+    let coinCount = 0;
+    const coinAmountEl = document.getElementById('coinAmount');
+    const coinEl = document.getElementById('coin');
+
+    // Функция начисления монет с анимацией
+    function earnCoin() {
+      // Увеличиваем количество монет
+      coinCount++;
+      coinAmountEl.textContent = coinCount;
+      
+      // Добавляем bounce-анимацию к монете
+      coinEl.classList.add('clicked');
+      setTimeout(() => {
+        coinEl.classList.remove('clicked');
+      }, 400);
+      
+      // Создаем элемент для анимации «летящей» монетки
+      const flyCoin = document.createElement('div');
+      flyCoin.classList.add('coin-fly');
+      flyCoin.textContent = '+1';
+      
+      // Добавляем элемент в контейнер с монетой
+      coinEl.parentElement.appendChild(flyCoin);
+      
+      // После завершения анимации удаляем элемент
+      flyCoin.addEventListener('animationend', () => {
+        flyCoin.remove();
+      });
+    }
+
+    // Переключение между вкладками
+    function showSection(section) {
+      const gameSection = document.getElementById('gameSection');
+      const tasksSection = document.getElementById('tasksSection');
+      const navGame = document.getElementById('navGame');
+      const navTasks = document.getElementById('navTasks');
+
+      if (section === 'game') {
+        gameSection.style.display = 'block';
+        tasksSection.style.display = 'none';
+        navGame.classList.add('active');
+        navTasks.classList.remove('active');
+      } else if (section === 'tasks') {
+        gameSection.style.display = 'none';
+        tasksSection.style.display = 'block';
+        navTasks.classList.add('active');
+        navGame.classList.remove('active');
+      }
+    }
+
+    
+    window.addEventListener('load', () => {
+      let telegramUserId = 'default';
+      if (window.Telegram && Telegram.WebApp && Telegram.WebApp.initDataUnsafe && Telegram.WebApp.initDataUnsafe.user) {
+        telegramUserId = Telegram.WebApp.initDataUnsafe.user.id;
+      }
+      fetch(`/api/user/${telegramUserId}`)
+        .then(response => response.json())
+        .then(data => {
+          coinAmountEl.textContent = data.coin_balance;
+        })
+        .catch(err => console.error(err));
+    });
+  </script>
+</body>
+</html>
